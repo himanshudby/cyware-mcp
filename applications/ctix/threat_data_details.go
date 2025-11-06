@@ -35,7 +35,7 @@ type ThreadDataDetailsBasicResponse struct {
 	MarkingDefinitions       []any  `json:"marking_definitions"`
 	Modified                 int    `json:"modified"`
 	Name                     string `json:"name"`
-	Pattern                  string `json:"pattern"`
+	Pattern                  any    `json:"pattern"`
 	PatternType              string `json:"pattern_type"`
 	PatternVersion           string `json:"pattern_version"`
 	Sources                  []struct {
