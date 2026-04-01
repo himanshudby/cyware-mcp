@@ -177,6 +177,19 @@ func main() {
 		mux := http.NewServeMux()
 		var sessions sync.Map // sessionID -> *streamableHTTPSession
 
+		// Railway (and other PaaS) health checks often hit `/`.
+		// Return 200 so the service is considered healthy.
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/", "/healthz", "/health":
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte("ok"))
+			default:
+				http.NotFound(w, r)
+			}
+		})
+
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Route guard: only handle exact basePath (and basePath/).
 			if r.URL.Path != basePath && r.URL.Path != basePath+"/" {
