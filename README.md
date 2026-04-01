@@ -68,7 +68,7 @@ cyware-mcpserver/
 
 In `cmd/config.yaml`, update the following details::
 - Cyware application credentials
-- MCP server transport settings — Choose either stdio or sse (with specified port)
+- MCP server transport settings — Choose either stdio or sse (remote) with host/port/base_url
 
 ### 🚀 Running the MCP Server
 
@@ -98,6 +98,26 @@ In `cmd/config.yaml`, update the following details::
    ```
 
 3. Restart Claude Desktop to complete the setup and view the available Cyware MCP server tools.
+
+## 🌐 Run as a Remote MCP Server (SSE)
+
+To run this server remotely (reachable over the network), set `server.mcp_mode: "sse"` and configure host/port:
+
+- **Bind address**: set `server.host: "0.0.0.0"` to listen on all interfaces (remote access). Use `"127.0.0.1"` for local-only.
+- **Advertised URL (recommended)**: set `server.base_url` to the public URL clients should use (especially behind a reverse proxy).
+- **Optional auth**: set `server.auth_token` to require `Authorization: Bearer <token>` on both `/sse` and `/message`.
+
+Example `cmd/config.yaml`:
+
+```yaml
+server:
+  mcp_mode: "sse"
+  host: "0.0.0.0"
+  port: "5421"
+  base_path: "/mcp"
+  base_url: "https://your-domain.example.com/mcp"
+  auth_token: "change-me"
+```
 
 # 🛠️ Available MCP Tools
 

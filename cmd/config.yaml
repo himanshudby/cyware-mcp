@@ -25,4 +25,9 @@ applications:
       secret_key : "secret_key"
 server:
   mcp_mode: "stdio"
+  # For remote MCP, use: mcp_mode: "sse"
+  # host: "0.0.0.0"
   # port: "5421"
+  # base_path: "/mcp"  # optional, useful behind a reverse proxy
+  # base_url: "https://your-domain.example.com/mcp" # optional, used to advertise message endpoint to clients
+  # auth_token: "change-me" # optional; if set, require: Authorization: Bearer <auth_token>

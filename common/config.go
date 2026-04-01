@@ -10,8 +10,12 @@ import (
 // Server holds configuration settings for the MCP server,
 // including the mode (e.g., "stdio", "sse") and the port it listens on.
 type Server struct {
-	MCPMode string `mapstructure:"mcp_mode"`
-	Port    string `mapstructure:"port"`
+	MCPMode   string `mapstructure:"mcp_mode"`
+	Host      string `mapstructure:"host"`
+	Port      string `mapstructure:"port"`
+	BaseURL   string `mapstructure:"base_url"`
+	BasePath  string `mapstructure:"base_path"`
+	AuthToken string `mapstructure:"auth_token"`
 }
 
 // Auth defines the authentication configuration for an application.
