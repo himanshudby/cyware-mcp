@@ -1,0 +1,9 @@
+.git
+.github
+.cursor
+**/*.log
+**/*.tmp
+**/node_modules
+dist
+out
+
