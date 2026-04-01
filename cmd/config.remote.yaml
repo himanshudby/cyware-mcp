@@ -12,11 +12,11 @@ applications:
       access_id: "access_id"
       secret_key: "secret_key"
 server:
-  mcp_mode: "sse"
+  mcp_mode: "streamable_http"
   host: "0.0.0.0"
   # port is taken from $PORT on Railway (or defaults to 5421 if $PORT is unset)
   port: ""
   base_path: "/mcp"
-  base_url: "https://cyware-mcp-production.up.railway.app/mcp"
+  base_url: ""
   auth_token: ""
 

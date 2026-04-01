@@ -119,6 +119,21 @@ server:
   auth_token: "change-me"
 ```
 
+## 🌐 Run as a Remote MCP Server (Streamable HTTP)
+
+Some clients only support **Streamable HTTP** (not SSE). In that case, configure:
+
+```yaml
+server:
+  mcp_mode: "streamable_http"
+  host: "0.0.0.0"
+  port: "5421"
+  base_path: "/mcp"
+  auth_token: ""
+```
+
+Client URL should be the **base path** (not `/sse`), e.g. `https://your-domain.example.com/mcp`.
+
 # 🛠️ Available MCP Tools
 
 ## Cyware Intel Exchange (CTIX)
