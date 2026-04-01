@@ -25,6 +25,39 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+type statusCapturingWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusCapturingWriter) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func withHTTPAccessLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		sw := &statusCapturingWriter{ResponseWriter: w, status: http.StatusOK}
+		defer func() {
+			log.Printf("%s %s -> %d (%s)", r.Method, r.URL.Path, sw.status, time.Since(start).Truncate(time.Millisecond))
+		}()
+		next.ServeHTTP(sw, r)
+	})
+}
+
+func withHTTPRecover(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Printf("panic in HTTP handler %s %s: %v", r.Method, r.URL.Path, rec)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
 func withBearerAuth(next http.Handler, token string) http.Handler {
 	if strings.TrimSpace(token) == "" {
 		return next
@@ -139,7 +172,7 @@ func main() {
 
 		httpServer := &http.Server{
 			Addr:              addr,
-			Handler:           mux,
+			Handler:           withHTTPAccessLog(withHTTPRecover(mux)),
 			ReadHeaderTimeout: 10 * time.Second,
 		}
 
@@ -286,7 +319,7 @@ func main() {
 
 		httpServer := &http.Server{
 			Addr:              addr,
-			Handler:           mux,
+			Handler:           withHTTPAccessLog(withHTTPRecover(mux)),
 			ReadHeaderTimeout: 10 * time.Second,
 		}
 
