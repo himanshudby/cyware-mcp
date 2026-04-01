@@ -17,6 +17,6 @@ server:
   # port is taken from $PORT on Railway (or defaults to 5421 if $PORT is unset)
   port: ""
   base_path: "/mcp"
-  base_url: ""
+  base_url: "https://cyware-mcp-production.up.railway.app/mcp"
   auth_token: ""
 
