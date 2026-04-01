@@ -111,6 +111,11 @@ func main() {
 		if host == "" {
 			host = "127.0.0.1"
 		}
+		// Prefer binding to all interfaces (IPv4 + IPv6) when host is 0.0.0.0
+		// so PaaS internal networks can connect over either family.
+		if host == "0.0.0.0" {
+			host = ""
+		}
 		port := cfg.Server.Port
 		if port == "" {
 			if envPort := strings.TrimSpace(os.Getenv("PORT")); envPort != "" {
@@ -158,6 +163,9 @@ func main() {
 		host := cfg.Server.Host
 		if host == "" {
 			host = "127.0.0.1"
+		}
+		if host == "0.0.0.0" {
+			host = ""
 		}
 		port := cfg.Server.Port
 		if port == "" {
