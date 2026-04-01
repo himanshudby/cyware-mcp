@@ -1,5 +1,10 @@
 package co
 
+import (
+	"context"
+	"fmt"
+)
+
 const user_details_endpoint = "/cpapi/rest-auth/user-details/"
 
 type LoggedInUserDetailsResponse struct {
@@ -67,8 +72,15 @@ type LoggedInUserDetailsResponse struct {
 	TenantID             string `json:"tenant_id"`
 }
 
-func GetLoggedInUserDetails() *LoggedInUserDetailsResponse {
+func GetLoggedInUserDetails(ctx context.Context) (*LoggedInUserDetailsResponse, error) {
 	user_details_resp := LoggedInUserDetailsResponse{}
-	CO_CLIENT.MakeRequest("GET", user_details_endpoint, nil, &user_details_resp, nil, nil)
-	return &user_details_resp
+	client, _, ok := COClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CO is not configured for this session")
+	}
+	_, err := client.MakeRequest("GET", user_details_endpoint, nil, &user_details_resp, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &user_details_resp, nil
 }

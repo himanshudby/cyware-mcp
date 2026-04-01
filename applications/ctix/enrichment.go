@@ -2,6 +2,7 @@ package ctix
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cyware-labs/cyware-mcpserver/common"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -145,9 +146,13 @@ type EnrichmentResponse struct {
 	Verdict    string      `json:"verdict"`
 }
 
-func GetEnrichmenToolsList(params map[string]string) (*common.APIResponse, error) {
+func GetEnrichmenToolsList(ctx context.Context, params map[string]string) (*common.APIResponse, error) {
 	enrichmet_tool_list_resp := EnrichmentToolsList{}
-	resp, err := CTIX_CLIENT.MakeRequest("GET", list_enrichment_tool, params, &enrichmet_tool_list_resp, nil, nil)
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CTIX is not configured for this session")
+	}
+	resp, err := client.MakeRequest("GET", list_enrichment_tool, params, &enrichmet_tool_list_resp, nil, nil)
 
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(enrichmet_tool_list_resp),
@@ -174,15 +179,19 @@ func GetEnrichmenToolsListTool(s *server.MCPServer) {
 		params_list := []string{"page", "page_size", "is_active", "q"}
 		params := common.ExtractParams(request, params_list)
 		params["category"] = "threat_intelligence_enrichment"
-		resp, err := GetEnrichmenToolsList(params)
+		resp, err := GetEnrichmenToolsList(ctx, params)
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }
 
-func GetEnrichmentToolsDetails(app_id string) (*common.APIResponse, error) {
+func GetEnrichmentToolsDetails(ctx context.Context, app_id string) (*common.APIResponse, error) {
 	var enrichment_tool_details_resp any
 	endpoint := enrichment_tool_details + app_id + "/"
-	resp, err := CTIX_CLIENT.MakeRequest("GET", endpoint, nil, &enrichment_tool_details_resp, nil, nil)
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CTIX is not configured for this session")
+	}
+	resp, err := client.MakeRequest("GET", endpoint, nil, &enrichment_tool_details_resp, nil, nil)
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(enrichment_tool_details_resp),
 		RawResponse:     resp,
@@ -202,16 +211,20 @@ func GetEnrichmentToolsDetailsTool(s *server.MCPServer) {
 	s.AddTool(getEnrichmenToolsDetail, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		app_id := request.Params.Arguments["app_id"].(string)
 
-		resp, err := GetEnrichmentToolsDetails(app_id)
+		resp, err := GetEnrichmentToolsDetails(ctx, app_id)
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }
 
-func GetEnrichmentToolActionConfigs(app_id string, params map[string]string) (*common.APIResponse, error) {
+func GetEnrichmentToolActionConfigs(ctx context.Context, app_id string, params map[string]string) (*common.APIResponse, error) {
 	endpoint := "/integration/apps/" + app_id + "/action_configs/"
 	enrichment_tool_action_config_resp := EnrichmentToolActionConfig{}
 
-	resp, err := CTIX_CLIENT.MakeRequest("GET", endpoint, params, &enrichment_tool_action_config_resp, nil, nil)
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CTIX is not configured for this session")
+	}
+	resp, err := client.MakeRequest("GET", endpoint, params, &enrichment_tool_action_config_resp, nil, nil)
 
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(enrichment_tool_action_config_resp),
@@ -240,15 +253,19 @@ func GetEnrichmentToolActionConfigsTool(s *server.MCPServer) {
 		app_id := request.Params.Arguments["app_id"].(string)
 		params_list := []string{"page", "page_size"}
 		params := common.ExtractParams(request, params_list)
-		resp, err := GetEnrichmentToolActionConfigs(app_id, params)
+		resp, err := GetEnrichmentToolActionConfigs(ctx, app_id, params)
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }
 
-func GetAllEnrichmentToolSupportedForThreatDataObject(params map[string]string) (*common.APIResponse, error) {
+func GetAllEnrichmentToolSupportedForThreatDataObject(ctx context.Context, params map[string]string) (*common.APIResponse, error) {
 	endpoint := "integration/apps/actions/"
 	supported_enrichmenttool_resp := SupportedEnrichmentToolForSDO{}
-	resp, err := CTIX_CLIENT.MakeRequest("GET", endpoint, params, &supported_enrichmenttool_resp, nil, nil)
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CTIX is not configured for this session")
+	}
+	resp, err := client.MakeRequest("GET", endpoint, params, &supported_enrichmenttool_resp, nil, nil)
 
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(supported_enrichmenttool_resp),
@@ -284,15 +301,19 @@ func GetAllEnrichmentToolSupportedForThreatDataObjectTool(s *server.MCPServer) {
 	s.AddTool(getAllEnrichmentToolSupportedForThreatDataObject, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		params_list := []string{"action_name", "is_active", "full_list"}
 		params := common.ExtractParams(request, params_list)
-		resp, err := GetAllEnrichmentToolSupportedForThreatDataObject(params)
+		resp, err := GetAllEnrichmentToolSupportedForThreatDataObject(ctx, params)
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }
 
-func EnrichThreatDataObject(params map[string]string) (*common.APIResponse, error) {
+func EnrichThreatDataObject(ctx context.Context, params map[string]string) (*common.APIResponse, error) {
 	endpoint := "integration/apps/update/threatdata/"
 	enrichment_resp := EnrichmentResponse{}
-	resp, err := CTIX_CLIENT.MakeRequest("GET", endpoint, params, &enrichment_resp, nil, nil)
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CTIX is not configured for this session")
+	}
+	resp, err := client.MakeRequest("GET", endpoint, params, &enrichment_resp, nil, nil)
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(enrichment_resp),
 		RawResponse:     resp,
@@ -337,7 +358,7 @@ func EnrichThreatDataObjectTool(s *server.MCPServer) {
 	s.AddTool(enrichThreatDataObjectTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		params_list := []string{"app_slug", "value", "action_slug", "object_id", "object_type", "ioc_type"}
 		params := common.ExtractParams(request, params_list)
-		resp, err := EnrichThreatDataObject(params)
+		resp, err := EnrichThreatDataObject(ctx, params)
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }

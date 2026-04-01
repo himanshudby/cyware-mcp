@@ -48,9 +48,17 @@ type ExecuteAPIResponse struct {
 	ResultID string `json:"result_id"`
 }
 
-func GetPlayBookList(params map[string]string) (*common.APIResponse, error) {
+func GetPlayBookList(ctx context.Context, params map[string]string) (*common.APIResponse, error) {
 	playbook_listing_resp := ListPlaybookResponse{}
-	resp, err := CO_CLIENT.MakeRequest("GET", GetSoarEndpoint(list_playbook_endpoint), params, &playbook_listing_resp, nil, nil)
+	client, _, ok := COClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CO is not configured for this session")
+	}
+	endpoint, err := SoarEndpoint(ctx, list_playbook_endpoint)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.MakeRequest("GET", endpoint, params, &playbook_listing_resp, nil, nil)
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(playbook_listing_resp),
 		RawResponse:     resp,
@@ -73,14 +81,22 @@ func GetPlayBookListTool(s *server.MCPServer) {
 	s.AddTool(getPlayBookListTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		params_list := []string{"page", "page_size", "status", "q"}
 		params := common.ExtractParams(request, params_list)
-		resp, err := GetPlayBookList(params)
+		resp, err := GetPlayBookList(ctx, params)
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }
 
-func GetPlaybookDetails(playbook_id string) (*common.APIResponse, error) {
-	endpoint := fmt.Sprintf("%v%v/", GetSoarEndpoint(list_playbook_endpoint), playbook_id)
-	resp, err := CO_CLIENT.MakeRequest("GET", endpoint, nil, nil, nil, nil)
+func GetPlaybookDetails(ctx context.Context, playbook_id string) (*common.APIResponse, error) {
+	client, _, ok := COClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CO is not configured for this session")
+	}
+	base, err := SoarEndpoint(ctx, list_playbook_endpoint)
+	if err != nil {
+		return nil, err
+	}
+	endpoint := fmt.Sprintf("%v%v/", base, playbook_id)
+	resp, err := client.MakeRequest("GET", endpoint, nil, nil, nil, nil)
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(resp.String()),
 		RawResponse:     resp,
@@ -99,16 +115,23 @@ func GetPlaybookDetailsTool(s *server.MCPServer) {
 	s.AddTool(getPlaybookDetailsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		playbook_id := request.Params.Arguments["playbook_id"].(string)
 
-		resp, err := GetPlaybookDetails(playbook_id)
+		resp, err := GetPlaybookDetails(ctx, playbook_id)
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }
 
-func ExecutePlaybook(payload any) (*common.APIResponse, error) {
+func ExecutePlaybook(ctx context.Context, payload any) (*common.APIResponse, error) {
 	hash := payload.(map[string]any)["pbhash"]
-	endpoint := GetSoarEndpoint(fmt.Sprintf("playbooks/%v/execute/", hash))
+	client, _, ok := COClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CO is not configured for this session")
+	}
+	endpoint, err := SoarEndpoint(ctx, fmt.Sprintf("playbooks/%v/execute/", hash))
+	if err != nil {
+		return nil, err
+	}
 	exec_resp := ExecuteAPIResponse{}
-	resp, err := CO_CLIENT.MakeRequest("POST", endpoint, nil, nil, payload, nil)
+	resp, err := client.MakeRequest("POST", endpoint, nil, nil, payload, nil)
 	json.Unmarshal([]byte(resp.String()), &exec_resp)
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(exec_resp),
@@ -127,7 +150,7 @@ func ExecutePlaybookTool(s *server.MCPServer) {
 	)
 
 	s.AddTool(executePlaybookTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		resp, err := ExecutePlaybook(request.Params.Arguments)
+		resp, err := ExecutePlaybook(ctx, request.Params.Arguments)
 		return common.MCPToolResponse(resp, []int{201}, err)
 	})
 

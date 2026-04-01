@@ -85,12 +85,15 @@ type UserGroupListingResponse struct {
 	PermissionGranted int `json:"permission_granted"`
 }
 
-func GetCTIXUserListing(params map[string]string) UserListingResponse {
-
+func GetCTIXUserListing(ctx context.Context, params map[string]string) (UserListingResponse, error) {
 	resp := UserListingResponse{}
-	CTIX_CLIENT.MakeRequest("GET", user_listing_endpoint, params, &resp, nil, nil)
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return resp, fmt.Errorf("CTIX is not configured for this session")
+	}
+	_, err := client.MakeRequest("GET", user_listing_endpoint, params, &resp, nil, nil)
 
-	return resp
+	return resp, err
 }
 
 func GetCTIXUserListingTool(s *server.MCPServer) {
@@ -113,17 +116,24 @@ func GetCTIXUserListingTool(s *server.MCPServer) {
 	s.AddTool(getCTIXUserListingTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		params_list := []string{"page", "page_size", "q", "is_active", "is_blocked", "is_read_only"}
 		params := common.ExtractParams(request, params_list)
-		resp := GetCTIXUserListing(params)
+		resp, err := GetCTIXUserListing(ctx, params)
+		if err != nil {
+			return mcp.NewToolResultText(err.Error()), err
+		}
 		result, _ := json.Marshal(resp)
 
 		return mcp.NewToolResultText(fmt.Sprintf("Successfully got the list of users in CTIX %v", string(result))), nil
 	})
 }
 
-func GetCTIXUserGroupList(params map[string]string) UserGroupListingResponse {
+func GetCTIXUserGroupList(ctx context.Context, params map[string]string) (UserGroupListingResponse, error) {
 	resp := UserGroupListingResponse{}
-	CTIX_CLIENT.MakeRequest("GET", user_group_listing_endpoint, params, &resp, nil, nil)
-	return resp
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return resp, fmt.Errorf("CTIX is not configured for this session")
+	}
+	_, err := client.MakeRequest("GET", user_group_listing_endpoint, params, &resp, nil, nil)
+	return resp, err
 }
 
 func GetCTIXUserGroupListTool(s *server.MCPServer) {
@@ -143,7 +153,10 @@ func GetCTIXUserGroupListTool(s *server.MCPServer) {
 	s.AddTool(getCTIXUserGroupListTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		params_list := []string{"page", "page_size", "q"}
 		params := common.ExtractParams(request, params_list)
-		resp := GetCTIXUserGroupList(params)
+		resp, err := GetCTIXUserGroupList(ctx, params)
+		if err != nil {
+			return mcp.NewToolResultText(err.Error()), err
+		}
 		result, _ := json.Marshal(resp)
 
 		return mcp.NewToolResultText(fmt.Sprintf("Successfully got the list of users group in CTIX %v", string(result))), nil

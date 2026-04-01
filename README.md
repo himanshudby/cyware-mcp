@@ -134,6 +134,17 @@ server:
 
 Client URL should be the **base path** (not `/sse`), e.g. `https://your-domain.example.com/mcp`.
 
+## 🔐 Per-client CTIX/CO credentials (hosted mode)
+
+When running this server as a hosted/remote MCP server, different clients can have different CTIX/CO URLs and credentials.
+Use these tools **once per MCP session** (right after `initialize`):
+
+- `configure-ctix-connection`
+- `configure-co-connection`
+
+After configuring, all CTIX/CO tools use the **session-specific** credentials.
+If a session never calls these tools, the server falls back to credentials in the YAML config.
+
 # 🛠️ Available MCP Tools
 
 ## Cyware Intel Exchange (CTIX)

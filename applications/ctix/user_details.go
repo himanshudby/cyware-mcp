@@ -2,6 +2,7 @@ package ctix
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cyware-labs/cyware-mcpserver/common"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -49,9 +50,13 @@ type LoggedInUserDetailsResponse struct {
 	} `json:"meta_data"`
 }
 
-func GetLoggedInUserDetails() (*common.APIResponse, error) {
+func GetLoggedInUserDetails(ctx context.Context) (*common.APIResponse, error) {
 	user_details_resp := LoggedInUserDetailsResponse{}
-	resp, err := CTIX_CLIENT.MakeRequest("GET", user_details_endpoint, nil, &user_details_resp, nil, nil)
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CTIX is not configured for this session")
+	}
+	resp, err := client.MakeRequest("GET", user_details_endpoint, nil, &user_details_resp, nil, nil)
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(user_details_resp),
 		RawResponse:     resp,
@@ -63,7 +68,7 @@ func GetLoggedInUserDetailsTool(s *server.MCPServer) {
 		mcp.WithDescription(`This tool will give the current logged-in user details of the CTIX`),
 	)
 	s.AddTool(getLoggedInUserDetailsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		resp, err := GetLoggedInUserDetails()
+		resp, err := GetLoggedInUserDetails(ctx)
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }

@@ -41,7 +41,7 @@ func CQLCTIXSearchGrammarTool(s *server.MCPServer) {
 	})
 }
 
-func GetCQLQuerySearchResult(sort string, query string, page string, page_size string) (*common.APIResponse, error) {
+func GetCQLQuerySearchResult(ctx context.Context, sort string, query string, page string, page_size string) (*common.APIResponse, error) {
 	query = strings.ReplaceAll(query, "\"", "\\\"")
 	payload := strings.NewReader(fmt.Sprintf(`{"query": "%s"}`, query))
 
@@ -53,7 +53,11 @@ func GetCQLQuerySearchResult(sort string, query string, page string, page_size s
 
 	threat_data_list_resp := ThreatDataListResp{}
 
-	resp, err := CTIX_CLIENT.MakeRequest("POST", threat_data_list, params, &threat_data_list_resp, payload, nil)
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CTIX is not configured for this session")
+	}
+	resp, err := client.MakeRequest("POST", threat_data_list, params, &threat_data_list_resp, payload, nil)
 
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(threat_data_list_resp),
@@ -89,16 +93,20 @@ func GetCQLQuerySearchResultTool(s *server.MCPServer) {
 		page_size := request.Params.Arguments["page_size"].(string)
 		sort := request.Params.Arguments["sort"].(string)
 
-		resp, err := GetCQLQuerySearchResult(sort, query, page, page_size)
+		resp, err := GetCQLQuerySearchResult(ctx, sort, query, page, page_size)
 
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }
 
-func GetAvailableRelationTypeListing(params map[string]string) (*common.APIResponse, error) {
+func GetAvailableRelationTypeListing(ctx context.Context, params map[string]string) (*common.APIResponse, error) {
 	relation_listing_resp := RelationTypeListingResponse{}
 
-	resp, err := CTIX_CLIENT.MakeRequest("GET", relation_type_list, params, &relation_listing_resp, nil, nil)
+	client, _, ok := CTIXClientFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("CTIX is not configured for this session")
+	}
+	resp, err := client.MakeRequest("GET", relation_type_list, params, &relation_listing_resp, nil, nil)
 
 	return &common.APIResponse{
 		FilteredReponse: common.JsonifyResponse(relation_listing_resp),
@@ -119,7 +127,7 @@ func GetAvailableRelationTypeListingTool(s *server.MCPServer) {
 			"sort":      "name",
 		}
 
-		resp, err := GetAvailableRelationTypeListing(params)
+		resp, err := GetAvailableRelationTypeListing(ctx, params)
 		return common.MCPToolResponse(resp, []int{200}, err)
 	})
 }

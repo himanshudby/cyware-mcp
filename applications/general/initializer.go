@@ -9,4 +9,6 @@ func Initialize(s *server.MCPServer) {
 func InitTools(s *server.MCPServer) {
 	// GetEpochWithDeltaFromNowDaysTool(s)
 	ConvertDateStringToEpochTool(s)
+	ConfigureCTIXConnectionTool(s)
+	ConfigureCOConnectionTool(s)
 }
