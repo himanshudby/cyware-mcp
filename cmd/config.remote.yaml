@@ -1,0 +1,22 @@
+applications:
+  ctix:
+    base_url: "CTIX Base URL"
+    auth:
+      type: "openapicreds"
+      access_id: "access_id"
+      secret_key: "secret_key"
+  co:
+    base_url: "CO Base URL"
+    auth:
+      type: "openapicreds"
+      access_id: "access_id"
+      secret_key: "secret_key"
+server:
+  mcp_mode: "sse"
+  host: "0.0.0.0"
+  # port is taken from $PORT on Railway (or defaults to 5421 if $PORT is unset)
+  port: ""
+  base_path: "/mcp"
+  base_url: ""
+  auth_token: ""
+

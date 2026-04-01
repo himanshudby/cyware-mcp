@@ -34,7 +34,7 @@ func withBearerAuth(next http.Handler, token string) http.Handler {
 }
 
 func main() {
-	envPath := flag.String("config_path", "config.yaml", "Path to the .yaml file")
+	envPath := flag.String("config_path", "cmd/config.yaml", "Path to the .yaml file")
 	flag.Parse()
 
 	s := server.NewMCPServer(
@@ -77,7 +77,11 @@ func main() {
 		}
 		port := cfg.Server.Port
 		if port == "" {
-			port = "5421"
+			if envPort := strings.TrimSpace(os.Getenv("PORT")); envPort != "" {
+				port = envPort
+			} else {
+				port = "5421"
+			}
 		}
 		addr := net.JoinHostPort(host, port)
 

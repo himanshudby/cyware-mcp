@@ -1,0 +1,13 @@
+[phases.setup]
+# Ensure Go is available
+nixPkgs = ["go"]
+
+[phases.build]
+cmds = [
+  "go mod download",
+  "go build -ldflags='-w -s' -o out ./cmd"
+]
+
+[start]
+cmd = "./out -config_path cmd/config.remote.yaml"
+
