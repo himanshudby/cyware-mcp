@@ -16,9 +16,11 @@ WORKDIR /app
 COPY --from=build /out /app/out
 COPY --from=build /app/cmd/config.remote.yaml /app/cmd/config.remote.yaml
 
-ENV PORT=5421
+# Railway commonly routes to port 8080 for Docker deployments.
+# The app will still honor $PORT if Railway sets a different value.
+ENV PORT=8080
 
-EXPOSE 5421
+EXPOSE 8080
 
 ENTRYPOINT ["/app/out"]
 CMD ["-config_path", "/app/cmd/config.remote.yaml"]
