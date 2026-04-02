@@ -14,7 +14,13 @@ var (
 )
 
 func normalizeCTIXConfig(app common.Application) common.Application {
-	app.BASE_URL = common.GetDomain(app.BASE_URL) + "/ctixapi/"
+	domain, err := common.NormalizeDomainURL(app.BASE_URL)
+	if err != nil {
+		// Keep BASE_URL empty so callers can return a clean "not configured" error.
+		app.BASE_URL = ""
+		return app
+	}
+	app.BASE_URL = domain + "/ctixapi/"
 	return app
 }
 
@@ -73,6 +79,9 @@ func CTIXClientFromContext(ctx context.Context) (common.APIClient, common.Applic
 	if sid, ok := common.SessionIDFromContext(ctx); ok {
 		if app, ok := common.GetSessionCTIX(sid); ok && app != nil {
 			cfg := normalizeCTIXConfig(*app)
+			if cfg.BASE_URL == "" {
+				return common.APIClient{}, common.Application{}, false
+			}
 			return buildCTIXClient(cfg), cfg, true
 		}
 	}

@@ -30,8 +30,12 @@ func ConfigureCTIXConnectionTool(s *server.MCPServer) {
 		}
 
 		args := request.Params.Arguments
+		baseURL := args["base_url"].(string)
+		if _, err := common.NormalizeDomainURL(baseURL); err != nil {
+			return mcp.NewToolResultText(fmt.Sprintf("Invalid CTIX base_url: %v", err)), err
+		}
 		app := common.Application{
-			BASE_URL: args["base_url"].(string),
+			BASE_URL: baseURL,
 			Auth: common.Auth{
 				Type: args["auth_type"].(string),
 			},
@@ -83,8 +87,12 @@ func ConfigureCOConnectionTool(s *server.MCPServer) {
 		}
 
 		args := request.Params.Arguments
+		baseURL := args["base_url"].(string)
+		if _, err := common.NormalizeDomainURL(baseURL); err != nil {
+			return mcp.NewToolResultText(fmt.Sprintf("Invalid CO base_url: %v", err)), err
+		}
 		app := common.Application{
-			BASE_URL: args["base_url"].(string),
+			BASE_URL: baseURL,
 			Auth: common.Auth{
 				Type: args["auth_type"].(string),
 			},
