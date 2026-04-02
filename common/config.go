@@ -3,6 +3,8 @@ package common
 import (
 	"fmt"
 	"net/url"
+	"os"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -11,6 +13,8 @@ import (
 // including the mode (e.g., "stdio", "sse") and the port it listens on.
 type Server struct {
 	MCPMode   string `mapstructure:"mcp_mode"`
+	// Transport is an alias for MCPMode (same values). If MCPMode is empty, Transport is used.
+	Transport string `mapstructure:"transport"`
 	Host      string `mapstructure:"host"`
 	Port      string `mapstructure:"port"`
 	BaseURL   string `mapstructure:"base_url"`
@@ -71,6 +75,16 @@ func Load(path string) (*Config, error) {
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to decode into struct: %w", err)
+	}
+
+	// Allow either mcp_mode or transport (documentation / copy-paste friendly).
+	if strings.TrimSpace(cfg.Server.MCPMode) == "" && strings.TrimSpace(cfg.Server.Transport) != "" {
+		cfg.Server.MCPMode = cfg.Server.Transport
+	}
+
+	// Optional override for containers / PaaS (e.g. Railway) without editing YAML.
+	if env := strings.TrimSpace(os.Getenv("MCP_MODE")); env != "" {
+		cfg.Server.MCPMode = env
 	}
 
 	return &cfg, nil

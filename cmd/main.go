@@ -129,7 +129,7 @@ func main() {
 	general.Initialize(s)
 	co.Initialize(cfg, s)
 
-	mcp_server_mode := cfg.Server.MCPMode
+	mcp_server_mode := normalizeMCPMode(cfg.Server.MCPMode)
 	if mcp_server_mode == "" {
 		mcp_server_mode = "stdio"
 	}
@@ -336,6 +336,23 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_ = httpServer.Shutdown(ctx)
+	default:
+		log.Fatalf(
+			`invalid server.mcp_mode %q (or server.transport): use one of "stdio", "sse", "streamable_http" (aliases: "http", "streamable-http"), or set env MCP_MODE`,
+			strings.TrimSpace(cfg.Server.MCPMode),
+		)
 	}
 
+}
+
+// normalizeMCPMode maps common variants to the values used in cmd/main switch.
+func normalizeMCPMode(mode string) string {
+	m := strings.TrimSpace(strings.ToLower(mode))
+	m = strings.ReplaceAll(m, "-", "_")
+	switch m {
+	case "streamablehttp":
+		return "streamable_http"
+	default:
+		return m
+	}
 }
