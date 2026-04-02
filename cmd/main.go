@@ -102,6 +102,35 @@ func randomSessionID() (string, error) {
 	return hex.EncodeToString(b[:]), nil
 }
 
+// writeStreamableHTTPJSONError responds with application/json so MCP HTTP clients do not fail
+// transport detection (they expect application/json or text/event-stream, not text/plain).
+func writeStreamableHTTPJSONError(w http.ResponseWriter, httpStatus int, message string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(httpStatus)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      nil,
+		"error": map[string]any{
+			"code":    -32000,
+			"message": message,
+		},
+	})
+}
+
+func withBearerAuthStreamableHTTP(next http.Handler, token string) http.Handler {
+	if strings.TrimSpace(token) == "" {
+		return next
+	}
+	expected := "Bearer " + strings.TrimSpace(token)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != expected {
+			writeStreamableHTTPJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	envPath := flag.String("config_path", "cmd/config.yaml", "Path to the .yaml file")
 	flag.Parse()
@@ -234,7 +263,7 @@ func main() {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Route guard: only handle exact basePath (and basePath/).
 			if r.URL.Path != basePath && r.URL.Path != basePath+"/" {
-				http.NotFound(w, r)
+				writeStreamableHTTPJSONError(w, http.StatusNotFound, "not found")
 				return
 			}
 
@@ -242,7 +271,7 @@ func main() {
 			case http.MethodPost:
 				raw, err := io.ReadAll(r.Body)
 				if err != nil {
-					http.Error(w, "failed to read request body", http.StatusBadRequest)
+					writeStreamableHTTPJSONError(w, http.StatusBadRequest, "failed to read request body")
 					return
 				}
 				defer r.Body.Close()
@@ -258,13 +287,13 @@ func main() {
 
 				if sessionID == "" {
 					if peek.Method != "initialize" {
-						http.Error(w, "missing Mcp-Session-Id", http.StatusBadRequest)
+						writeStreamableHTTPJSONError(w, http.StatusBadRequest, "missing Mcp-Session-Id")
 						return
 					}
 
 					sid, err := randomSessionID()
 					if err != nil {
-						http.Error(w, "failed to create session", http.StatusInternalServerError)
+						writeStreamableHTTPJSONError(w, http.StatusInternalServerError, "failed to create session")
 						return
 					}
 					sess = &streamableHTTPSession{
@@ -272,7 +301,7 @@ func main() {
 						notificationChannel: make(chan mcp.JSONRPCNotification, 64),
 					}
 					if err := s.RegisterSession(r.Context(), sess); err != nil {
-						http.Error(w, "failed to register session", http.StatusInternalServerError)
+						writeStreamableHTTPJSONError(w, http.StatusInternalServerError, "failed to register session")
 						return
 					}
 					sessions.Store(sid, sess)
@@ -281,7 +310,7 @@ func main() {
 					val, ok := sessions.Load(sessionID)
 					if !ok {
 						// Client transport expects 404 to mean "session terminated, re-initialize".
-						http.NotFound(w, r)
+						writeStreamableHTTPJSONError(w, http.StatusNotFound, "session not found")
 						return
 					}
 					sess = val.(*streamableHTTPSession)
@@ -297,10 +326,13 @@ func main() {
 				}
 
 				if resp == nil {
+					// Notification acknowledgement; clients (e.g. Java/TS MCP SDKs) expect
+					// application/json, not default text/plain or an unset Content-Type.
+					w.Header().Set("Content-Type", "application/json; charset=utf-8")
 					w.WriteHeader(http.StatusAccepted)
 					return
 				}
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				_ = json.NewEncoder(w).Encode(resp)
 			case http.MethodDelete:
 				sessionID := strings.TrimSpace(r.Header.Get("Mcp-Session-Id"))
@@ -310,12 +342,12 @@ func main() {
 				}
 				w.WriteHeader(http.StatusNoContent)
 			default:
-				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				writeStreamableHTTPJSONError(w, http.StatusMethodNotAllowed, "method not allowed: use POST for MCP requests")
 			}
 		})
 
-		mux.Handle(basePath, withBearerAuth(handler, cfg.Server.AuthToken))
-		mux.Handle(basePath+"/", withBearerAuth(handler, cfg.Server.AuthToken))
+		mux.Handle(basePath, withBearerAuthStreamableHTTP(handler, cfg.Server.AuthToken))
+		mux.Handle(basePath+"/", withBearerAuthStreamableHTTP(handler, cfg.Server.AuthToken))
 
 		httpServer := &http.Server{
 			Addr:              addr,
