@@ -144,6 +144,8 @@ func main() {
 		server.WithInstructions(`
 		# Cyware MCP Server 
 		This server provides tools to access Cyware Products - CTIX(Cyware Threat Intel Exchange), CFTR, CSAP, CO platform functionalities and features.
+		## Hosted HTTP clients
+		Per-session CTIX/CO OpenAPI credentials may be sent on each HTTP request using headers X-Cyware-CTIX-Base-Url, X-Cyware-CTIX-Access-Id, X-Cyware-CTIX-Secret-Key, and/or X-Cyware-CO-Base-Url, X-Cyware-CO-Access-Id, X-Cyware-CO-Secret-Key (see README), or use configure-ctix-connection / configure-co-connection tools.
 		## ❗⚠️ Don't use tools where its mentioned in the tools description that it must be explicitly invoked.
 		`),
 	)
@@ -192,6 +194,12 @@ func main() {
 			s,
 			server.WithBaseURL(cfg.Server.BaseURL),
 			server.WithStaticBasePath(cfg.Server.BasePath),
+			server.WithSSEContextFunc(func(ctx context.Context, r *http.Request) context.Context {
+				if sess := server.ClientSessionFromContext(ctx); sess != nil {
+					common.ApplySessionFromMCPHeaders(sess.SessionID(), r.Header)
+				}
+				return ctx
+			}),
 		)
 
 		mux := http.NewServeMux()
@@ -316,6 +324,8 @@ func main() {
 					sess = val.(*streamableHTTPSession)
 				}
 
+				common.ApplySessionFromMCPHeaders(sessionID, r.Header)
+
 				ctx := s.WithContext(r.Context(), sess)
 
 				resp := s.HandleMessage(ctx, raw)
@@ -339,6 +349,7 @@ func main() {
 				if sessionID != "" {
 					sessions.Delete(sessionID)
 					s.UnregisterSession(r.Context(), sessionID)
+					common.ClearSession(sessionID)
 				}
 				w.WriteHeader(http.StatusNoContent)
 			default:

@@ -137,13 +137,33 @@ Client URL should be the **base path** (not `/sse`), e.g. `https://your-domain.e
 ## 🔐 Per-client CTIX/CO credentials (hosted mode)
 
 When running this server as a hosted/remote MCP server, different clients can have different CTIX/CO URLs and credentials.
+
+### Option A — HTTP headers (Streamable HTTP or SSE message requests)
+
+On **every** MCP HTTP request, the client may send Cyware OpenAPI credential headers. The server applies them to the current MCP session (same storage as the configure tools). Use **HTTPS** in production.
+
+| Product | Header | Purpose |
+|--------|--------|--------|
+| CTIX | `X-Cyware-CTIX-Base-Url` | Portal base URL (e.g. `https://your-tenant.cyware.com` or CTIX UI root) |
+| CTIX | `X-Cyware-CTIX-Access-Id` | OpenAPI access id |
+| CTIX | `X-Cyware-CTIX-Secret-Key` | OpenAPI secret key |
+| CO | `X-Cyware-CO-Base-Url` | CO / SOAR base URL (e.g. `https://your-tenant.cyware.com/soar/`) |
+| CO | `X-Cyware-CO-Access-Id` | OpenAPI access id |
+| CO | `X-Cyware-CO-Secret-Key` | OpenAPI secret key |
+
+For each product, **all three** headers must be present or that product is skipped for that request. This uses auth type `openapicreds`, same as `configure-*-connection`.
+
+Operators can disable header injection with env `CYWARE_DISABLE_UPSTREAM_SESSION_HEADERS=1` (clients must then use the tools or YAML).
+
+### Option B — MCP tools
+
 Use these tools **once per MCP session** (right after `initialize`):
 
 - `configure-ctix-connection`
 - `configure-co-connection`
 
-After configuring, all CTIX/CO tools use the **session-specific** credentials.
-If a session never calls these tools, the server falls back to credentials in the YAML config.
+After configuring (via headers or tools), all CTIX/CO tools use the **session-specific** credentials.
+If a session never sets credentials, the server falls back to credentials in the YAML config.
 
 # 🛠️ Available MCP Tools
 
