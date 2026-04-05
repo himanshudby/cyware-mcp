@@ -3,6 +3,7 @@ applications:
     base_url: "CTIX Base URL"
     # Example URL : "https://demo.cyware.com/ctix/"
     auth:
+      # type is optional when using OpenAPI access id + secret (defaults to openapicreds).
       # type: "basic"
       # username: "username"
       # password: "password"
@@ -15,6 +16,7 @@ applications:
     base_url: "CO Base URL"
     # Example URL : "https://demo.cyware.com/soar/"
     auth:
+      # type is optional when using OpenAPI access id + secret (defaults to openapicreds).
       # type: "basic"
       # username: "username"
       # password: "password"

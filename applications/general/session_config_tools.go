@@ -4,18 +4,34 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/cyware-labs/cyware-mcpserver/common"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
+func toolStringArg(args map[string]interface{}, key string) string {
+	if args == nil {
+		return ""
+	}
+	v, ok := args[key]
+	if !ok || v == nil {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(s)
+}
+
 func ConfigureCTIXConnectionTool(s *server.MCPServer) {
 	tool := mcp.NewTool(
 		"configure-ctix-connection",
 		mcp.WithDescription("Configure CTIX base_url and credentials for the current MCP session. This enables per-client CTIX access on a hosted MCP server."),
 		mcp.WithString("base_url", mcp.Required(), mcp.Description("CTIX base URL, e.g. https://demo.cyware.com/ctix/")),
-		mcp.WithString("auth_type", mcp.Required(), mcp.Description(`Auth type: "basic", "token", or "openapicreds"`)),
+		mcp.WithString("auth_type", mcp.Description(`Optional. One of "basic", "token", or "openapicreds". Defaults to "openapicreds" when access_id and secret_key are set.`)),
 		mcp.WithString("username", mcp.Description("Required for auth_type=basic")),
 		mcp.WithString("password", mcp.Description("Required for auth_type=basic")),
 		mcp.WithString("token", mcp.Description("Required for auth_type=token")),
@@ -30,32 +46,26 @@ func ConfigureCTIXConnectionTool(s *server.MCPServer) {
 		}
 
 		args := request.Params.Arguments
-		baseURL := args["base_url"].(string)
+		baseURL := toolStringArg(args, "base_url")
+		if baseURL == "" {
+			return mcp.NewToolResultText("base_url is required"), nil
+		}
 		if _, err := common.NormalizeDomainURL(baseURL); err != nil {
 			return mcp.NewToolResultText(fmt.Sprintf("Invalid CTIX base_url: %v", err)), err
 		}
 		app := common.Application{
 			BASE_URL: baseURL,
 			Auth: common.Auth{
-				Type: args["auth_type"].(string),
+				Type: toolStringArg(args, "auth_type"),
 			},
 		}
 
-		if v, ok := args["username"].(string); ok {
-			app.Auth.Username = v
-		}
-		if v, ok := args["password"].(string); ok {
-			app.Auth.Password = v
-		}
-		if v, ok := args["token"].(string); ok {
-			app.Auth.Token = v
-		}
-		if v, ok := args["access_id"].(string); ok {
-			app.Auth.AccessID = v
-		}
-		if v, ok := args["secret_key"].(string); ok {
-			app.Auth.SecretKey = v
-		}
+		app.Auth.Username = toolStringArg(args, "username")
+		app.Auth.Password = toolStringArg(args, "password")
+		app.Auth.Token = toolStringArg(args, "token")
+		app.Auth.AccessID = toolStringArg(args, "access_id")
+		app.Auth.SecretKey = toolStringArg(args, "secret_key")
+		app.Auth.Type = common.NormalizeAuthType(app.Auth)
 
 		common.SetSessionCTIX(sid, app)
 		out, _ := json.Marshal(map[string]any{
@@ -72,7 +82,7 @@ func ConfigureCOConnectionTool(s *server.MCPServer) {
 		"configure-co-connection",
 		mcp.WithDescription("Configure CO base_url and credentials for the current MCP session. This enables per-client CO access on a hosted MCP server."),
 		mcp.WithString("base_url", mcp.Required(), mcp.Description("CO base URL, e.g. https://demo.cyware.com/soar/")),
-		mcp.WithString("auth_type", mcp.Required(), mcp.Description(`Auth type: "basic", "token", or "openapicreds"`)),
+		mcp.WithString("auth_type", mcp.Description(`Optional. One of "basic", "token", or "openapicreds". Defaults to "openapicreds" when access_id and secret_key are set.`)),
 		mcp.WithString("username", mcp.Description("Required for auth_type=basic")),
 		mcp.WithString("password", mcp.Description("Required for auth_type=basic")),
 		mcp.WithString("token", mcp.Description("Required for auth_type=token")),
@@ -87,32 +97,26 @@ func ConfigureCOConnectionTool(s *server.MCPServer) {
 		}
 
 		args := request.Params.Arguments
-		baseURL := args["base_url"].(string)
+		baseURL := toolStringArg(args, "base_url")
+		if baseURL == "" {
+			return mcp.NewToolResultText("base_url is required"), nil
+		}
 		if _, err := common.NormalizeDomainURL(baseURL); err != nil {
 			return mcp.NewToolResultText(fmt.Sprintf("Invalid CO base_url: %v", err)), err
 		}
 		app := common.Application{
 			BASE_URL: baseURL,
 			Auth: common.Auth{
-				Type: args["auth_type"].(string),
+				Type: toolStringArg(args, "auth_type"),
 			},
 		}
 
-		if v, ok := args["username"].(string); ok {
-			app.Auth.Username = v
-		}
-		if v, ok := args["password"].(string); ok {
-			app.Auth.Password = v
-		}
-		if v, ok := args["token"].(string); ok {
-			app.Auth.Token = v
-		}
-		if v, ok := args["access_id"].(string); ok {
-			app.Auth.AccessID = v
-		}
-		if v, ok := args["secret_key"].(string); ok {
-			app.Auth.SecretKey = v
-		}
+		app.Auth.Username = toolStringArg(args, "username")
+		app.Auth.Password = toolStringArg(args, "password")
+		app.Auth.Token = toolStringArg(args, "token")
+		app.Auth.AccessID = toolStringArg(args, "access_id")
+		app.Auth.SecretKey = toolStringArg(args, "secret_key")
+		app.Auth.Type = common.NormalizeAuthType(app.Auth)
 
 		common.SetSessionCO(sid, app)
 		out, _ := json.Marshal(map[string]any{
@@ -123,4 +127,3 @@ func ConfigureCOConnectionTool(s *server.MCPServer) {
 		return mcp.NewToolResultText(fmt.Sprintf("%s", out)), nil
 	})
 }
-

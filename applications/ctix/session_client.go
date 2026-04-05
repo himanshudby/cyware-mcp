@@ -25,6 +25,7 @@ func normalizeCTIXConfig(app common.Application) common.Application {
 }
 
 func buildCTIXClient(app common.Application) common.APIClient {
+	app.Auth.Type = common.NormalizeAuthType(app.Auth)
 	app = normalizeCTIXConfig(app)
 
 	retryHook := func(r *resty.Response, err error) {
@@ -40,6 +41,8 @@ func buildCTIXClient(app common.Application) common.APIClient {
 			}
 			r.Request.SetHeader("Authorization", authToken)
 		case "openapicreds":
+			// Signature and Expires are refreshed on every request via AddRequestMiddleware;
+			// refresh again on retry for clock skew or edge cases.
 			newParams := common.GenerateAuthParams(app.Auth.AccessID, app.Auth.SecretKey)
 			r.Request.SetQueryParams(newParams)
 		}
@@ -68,8 +71,7 @@ func applyCTIXAuth(app common.Application, client *common.APIClient) {
 		token := common.FormatCywareToken(app.Auth.Token)
 		client.Client.SetHeader("Authorization", token)
 	case "openapicreds":
-		params := common.GenerateAuthParams(app.Auth.AccessID, app.Auth.SecretKey)
-		client.Client.SetQueryParams(params)
+		common.AttachOpenAPIQuerySignerOnEachRequest(client.Client, app.Auth.AccessID, app.Auth.SecretKey)
 	default:
 		log.Printf("unsupported ctix auth_type: %s", app.Auth.Type)
 	}
@@ -90,4 +92,3 @@ func CTIXClientFromContext(ctx context.Context) (common.APIClient, common.Applic
 	}
 	return ctixDefaultClient, ctixDefaultConfig, true
 }
-

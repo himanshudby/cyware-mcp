@@ -23,6 +23,7 @@ func normalizeCOConfig(app common.Application) common.Application {
 }
 
 func buildCOClient(app common.Application) common.APIClient {
+	app.Auth.Type = common.NormalizeAuthType(app.Auth)
 	app = normalizeCOConfig(app)
 
 	retryHook := func(r *resty.Response, err error) {
@@ -65,8 +66,7 @@ func applyCOAuth(app common.Application, client *common.APIClient) {
 		token := common.FormatCywareToken(app.Auth.Token)
 		client.Client.SetHeader("Authorization", token)
 	case "openapicreds":
-		params := common.GenerateAuthParams(app.Auth.AccessID, app.Auth.SecretKey)
-		client.Client.SetQueryParams(params)
+		common.AttachOpenAPIQuerySignerOnEachRequest(client.Client, app.Auth.AccessID, app.Auth.SecretKey)
 	default:
 		log.Printf("unsupported co auth_type: %s", app.Auth.Type)
 	}
@@ -124,4 +124,3 @@ func SoarEndpoint(ctx context.Context, endpoint string) (string, error) {
 	}
 	return fmt.Sprintf("/soarapi/%v/%v", ws, endpoint), nil
 }
-

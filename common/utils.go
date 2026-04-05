@@ -35,7 +35,9 @@ func Base64Encode(input string) string {
 	return base64.StdEncoding.EncodeToString([]byte(input))
 }
 
-// GenerateAuthParams generates authentication parameters
+// GenerateAuthParams builds Cyware OpenAPI query parameters (AccessID, Expires, Signature)
+// using HMAC-SHA1 over `accessID + "\n" + expires` as described in the Intel Exchange API
+// authentication guide: https://ctixapiv3.cyware.com/authentication
 func GenerateAuthParams(accessID, secretKey string) map[string]string {
 	// Generating unix timestamp
 	unixTimestamp := time.Now().Unix()
@@ -60,6 +62,36 @@ func GenerateAuthParams(accessID, secretKey string) map[string]string {
 		"Signature": hashInBase64,
 	}
 	return params
+}
+
+// NormalizeAuthType returns auth.Type if set; otherwise infers a type from credentials.
+// When both access_id and secret_key are set, the default is "openapicreds".
+func NormalizeAuthType(auth Auth) string {
+	t := strings.TrimSpace(strings.ToLower(auth.Type))
+	if t != "" {
+		return t
+	}
+	if strings.TrimSpace(auth.AccessID) != "" && strings.TrimSpace(auth.SecretKey) != "" {
+		return "openapicreds"
+	}
+	if strings.TrimSpace(auth.Token) != "" {
+		return "token"
+	}
+	if strings.TrimSpace(auth.Username) != "" && strings.TrimSpace(auth.Password) != "" {
+		return "basic"
+	}
+	return ""
+}
+
+// AttachOpenAPIQuerySignerOnEachRequest registers Resty middleware that sets fresh
+// AccessID, Expires, and Signature query parameters on every outgoing request.
+func AttachOpenAPIQuerySignerOnEachRequest(c *resty.Client, accessID, secretKey string) {
+	c.AddRequestMiddleware(func(_ *resty.Client, r *resty.Request) error {
+		for k, v := range GenerateAuthParams(accessID, secretKey) {
+			r.SetQueryParam(k, v)
+		}
+		return nil
+	})
 }
 
 // ExtractParams extracts params key from the tool call request and convert them into a map
